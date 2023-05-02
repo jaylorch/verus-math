@@ -284,7 +284,7 @@ pub(crate) fn handle_external_fn<'tcx>(
         );
     }
     // trait bounds aren't part of the type signature - we have to check those separately
-    if !predicates_match(ctxt.tcx, id, external_id, substs1) {
+    if !predicates_match_by_id(ctxt.tcx, id, external_id, substs1) {
         return err_span(
             sig.span,
             format!(
@@ -293,13 +293,7 @@ pub(crate) fn handle_external_fn<'tcx>(
         );
     }
 
-    let owning_module_of_external_item =
-        crate::rust_to_vir_base::def_id_to_vir_module(ctxt.tcx, external_id);
-    let external_item_visibility = mk_visibility(
-        ctxt,
-        &Some(owning_module_of_external_item), // REVIEW should this ever be None? what's owning module None mean?
-        external_id,
-    );
+    let external_item_visibility = mk_visibility(ctxt, external_id);
     if !vir::ast_util::is_visible_to_opt(&visibility, &external_item_visibility.restricted_to) {
         return err_span(
             sig.span,
@@ -321,6 +315,7 @@ pub(crate) fn check_item_fn<'tcx>(
     id: DefId,
     kind: FunctionKind,
     visibility: vir::ast::Visibility,
+    module_path: &vir::ast::Path,
     attrs: &[Attribute],
     sig: &'tcx FnSig<'tcx>,
     // (impl generics, impl def_id)
@@ -590,8 +585,9 @@ pub(crate) fn check_item_fn<'tcx>(
         (Some((x, _)), Some((typ, mode))) => (x, typ, mode),
         _ => panic!("internal error: ret_typ"),
     };
+    let ret_span = sig.decl.output.span();
     let ret = ctxt.spanned_new(
-        sig.span,
+        ret_span,
         ParamX {
             name: ret_name,
             typ: ret_typ,
@@ -661,6 +657,7 @@ pub(crate) fn check_item_fn<'tcx>(
         proxy,
         kind,
         visibility,
+        owning_module: Some(module_path.clone()),
         mode,
         fuel,
         typ_bounds,
@@ -719,7 +716,7 @@ fn is_mut_ty<'tcx>(
     }
 }
 
-fn predicates_match<'tcx>(
+fn predicates_match_by_id<'tcx>(
     tcx: TyCtxt<'tcx>,
     id1: rustc_span::def_id::DefId,
     id2: rustc_span::def_id::DefId,
@@ -727,6 +724,14 @@ fn predicates_match<'tcx>(
 ) -> bool {
     let preds1 = all_predicates(tcx, id1, substs);
     let preds2 = all_predicates(tcx, id2, substs);
+    predicates_match(tcx, preds1, preds2)
+}
+
+pub(crate) fn predicates_match<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    preds1: Vec<Predicate<'tcx>>,
+    preds2: Vec<Predicate<'tcx>>,
+) -> bool {
     if preds1.len() != preds2.len() {
         return false;
     }
@@ -810,6 +815,7 @@ pub(crate) fn check_item_const<'tcx>(
     span: Span,
     id: DefId,
     visibility: vir::ast::Visibility,
+    module_path: &vir::ast::Path,
     attrs: &[Attribute],
     typ: &Typ,
     body_id: &BodyId,
@@ -842,6 +848,7 @@ pub(crate) fn check_item_const<'tcx>(
         proxy: None,
         kind: FunctionKind::Static,
         visibility,
+        owning_module: Some(module_path.clone()),
         mode: Mode::Spec, // the function has mode spec; the mode attribute goes into ret.x.mode
         fuel,
         typ_bounds: Arc::new(vec![]),
@@ -929,6 +936,7 @@ pub(crate) fn check_foreign_item_fn<'tcx>(
         proxy: None,
         kind: FunctionKind::Static,
         visibility,
+        owning_module: None,
         fuel,
         mode,
         typ_bounds,

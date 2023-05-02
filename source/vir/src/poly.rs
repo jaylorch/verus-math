@@ -688,6 +688,7 @@ fn poly_function(ctx: &Ctx, function: &Function) -> Function {
         proxy,
         kind,
         visibility,
+        owning_module,
         mode: mut function_mode,
         fuel,
         typ_bounds,
@@ -826,6 +827,7 @@ fn poly_function(ctx: &Ctx, function: &Function) -> Function {
         proxy: proxy.clone(),
         kind: kind.clone(),
         visibility: visibility.clone(),
+        owning_module: owning_module.clone(),
         mode: function_mode,
         fuel: *fuel,
         typ_bounds: typ_bounds.clone(),
@@ -861,13 +863,15 @@ fn poly_datatype(ctx: &Ctx, datatype: &Datatype) -> Datatype {
 }
 
 pub fn poly_krate_for_module(ctx: &mut Ctx, krate: &Krate) -> Krate {
-    let KrateX { functions, datatypes, traits, module_ids, external_fns } = &**krate;
+    let KrateX { functions, datatypes, traits, module_ids, external_fns, external_types } =
+        &**krate;
     let kratex = KrateX {
         functions: functions.iter().map(|f| poly_function(ctx, f)).collect(),
         datatypes: datatypes.iter().map(|d| poly_datatype(ctx, d)).collect(),
         traits: traits.clone(),
         module_ids: module_ids.clone(),
         external_fns: external_fns.clone(),
+        external_types: external_types.clone(),
     };
     ctx.func_map = HashMap::new();
     for function in kratex.functions.iter() {
