@@ -75,6 +75,14 @@ fn check_well_founded_typ(
             // the height of Foo<List> is unrelated to the height of List)
             check_well_founded(datatypes, datatypes_well_founded, path)
         }
+        TypX::FnDef(_path, _type_args) => {
+            // I don't think there's any way to refer to explicitly refer to these types in
+            // Rust code, so it shouldn't be possible to use on in a struct definition
+            // or anything.
+            // Though this type is basically a named singleton type, so
+            // the correct result here would probably be `Ok(true)`
+            panic!("FnDef type is not expected in struct definitions");
+        }
         TypX::AnonymousClosure(..) => {
             unimplemented!();
         }
@@ -155,6 +163,9 @@ fn check_positive_uses(
                 check_positive_uses(global, local, t_polarity, t)?;
             }
             Ok(())
+        }
+        TypX::FnDef(_path, _type_args) => {
+            panic!("FnDef type is not expected in struct definitions");
         }
         TypX::Boxed(t) => check_positive_uses(global, local, polarity, t),
         TypX::TypParam(x) => {

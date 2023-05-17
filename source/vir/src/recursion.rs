@@ -182,6 +182,9 @@ fn terminates(
         | ExpX::VarAt(..)
         | ExpX::VarLoc(..)
         | ExpX::Old(..)
+        // ExecFnByName: no need for recursion checking because this can only be used
+        // in exec mode right now
+        | ExpX::ExecFnByName(..)
         | ExpX::NullaryOpr(..) => Ok(bool_exp(ExpX::Const(Constant::Bool(true)))),
         ExpX::Loc(e) => r(e),
         ExpX::Call(CallFun::Fun(x), targs, args) => {

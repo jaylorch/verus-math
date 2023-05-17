@@ -112,6 +112,7 @@ pub(crate) fn typ_to_air(ctx: &Ctx, typ: &Typ) -> air::ast::Typ {
                 }
             }
         }
+        TypX::FnDef(fun, _) => ident_typ(&path_to_air_ident(&crate::def::prefix_fndef_type(fun))),
         TypX::Boxed(_) => str_typ(POLY),
         TypX::TypParam(_) => str_typ(POLY),
         TypX::TypeId => str_typ(crate::def::TYPE),
@@ -166,6 +167,7 @@ pub fn typ_to_id(typ: &Typ) -> Expr {
             panic!("internal error: AnonymousClosure should have been removed by ast_simplify")
         }
         TypX::Datatype(path, typs) => datatype_id(path, typs),
+        TypX::FnDef(fun, typs) => fndef_id(fun, typs),
         TypX::Boxed(typ) => typ_to_id(typ),
         TypX::TypParam(x) => ident_var(&suffix_typ_param_id(x)),
         TypX::TypeId => panic!("internal error: typ_to_id of TypeId"),
@@ -186,6 +188,11 @@ pub(crate) fn fun_id(typs: &Typs, typ: &Typ) -> Expr {
 pub(crate) fn datatype_id(path: &Path, typs: &Typs) -> Expr {
     let f_name = crate::def::prefix_type_id(path);
     air::ast_util::ident_apply_or_var(&f_name, &Arc::new(vec_map(&**typs, typ_to_id)))
+}
+
+pub(crate) fn fndef_id(fun: &Fun, typs: &Typs) -> Expr {
+    let path = crate::def::prefix_fndef_type(fun);
+    datatype_id(&path, typs)
 }
 
 pub(crate) fn datatype_has_type(path: &Path, typs: &Typs, expr: &Expr) -> Expr {
@@ -268,6 +275,7 @@ fn try_box(ctx: &Ctx, expr: Expr, typ: &Typ) -> Option<Expr> {
                 }
             }
         }
+        TypX::FnDef(fun, _) => Some(crate::def::prefix_fndef_box(fun)),
         TypX::Boxed(_) => None,
         TypX::TypParam(_) => None,
         TypX::TypeId => None,
@@ -295,6 +303,7 @@ fn try_unbox(ctx: &Ctx, expr: Expr, typ: &Typ) -> Option<Expr> {
                 }
             }
         }
+        TypX::FnDef(fun, _) => Some(crate::def::prefix_fndef_box(fun)),
         TypX::Tuple(_) => None,
         TypX::Lambda(typs, _) => Some(prefix_unbox(&prefix_lambda_type(typs.len()))),
         TypX::AnonymousClosure(..) => unimplemented!(),
@@ -639,6 +648,8 @@ pub(crate) fn exp_to_expr(ctx: &Ctx, exp: &Exp, expr_ctxt: &ExprCtxt) -> Result<
                     InternalFun::ClosureReq => str_ident(crate::def::CLOSURE_REQ),
                     InternalFun::ClosureEns => str_ident(crate::def::CLOSURE_ENS),
                     InternalFun::CheckDecreaseInt => str_ident(crate::def::CHECK_DECREASE_INT),
+                    InternalFun::StaticReq(fun) => prefix_requires(&fun_to_air_ident(fun)),
+                    InternalFun::StaticEns(fun) => prefix_ensures(&fun_to_air_ident(fun)),
                 },
                 Arc::new(exprs),
             ))
@@ -654,6 +665,13 @@ pub(crate) fn exp_to_expr(ctx: &Ctx, exp: &Exp, expr_ctxt: &ExprCtxt) -> Result<
                 .map(|b| exp_to_expr(ctx, &b.a, expr_ctxt))
                 .collect::<Result<Vec<_>, VirErr>>()?;
             Arc::new(ExprX::Apply(variant, Arc::new(args)))
+        }
+        (ExpX::ExecFnByName(fun), false) => {
+            let singleton_ctor = variant_ident(
+                &crate::def::prefix_fndef_type(fun),
+                &Arc::new(crate::def::VARIANT_FNDEF_SINGLETON.to_string()),
+            );
+            Arc::new(ExprX::Apply(singleton_ctor, Arc::new(vec![])))
         }
         (ExpX::NullaryOpr(crate::ast::NullaryOpr::ConstGeneric(c)), false) => {
             str_apply(crate::def::CONST_INT, &vec![typ_to_id(c)])

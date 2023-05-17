@@ -111,6 +111,7 @@ fn subst_exp_rec(
         | ExpX::UnaryOpr(..)
         | ExpX::Binary(..)
         | ExpX::If(..)
+        | ExpX::ExecFnByName(..)
         | ExpX::WithTriggers(..) => crate::sst_visitor::map_shallow_exp(
             exp,
             &mut (substs, free_vars),
@@ -284,6 +285,7 @@ impl ExpX {
                 let args = exps.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(", ");
                 (format!("{:?}({})", func, args), 90)
             }
+            ExecFnByName(func) => (format!("{:?}", func), 99),
             NullaryOpr(crate::ast::NullaryOpr::ConstGeneric(_)) => {
                 ("const_generic".to_string(), 99)
             }

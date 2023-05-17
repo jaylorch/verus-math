@@ -80,6 +80,7 @@ fn check_trigger_expr(
                 | ExpX::CallLambda(..)
                 | ExpX::Ctor(..)
                 | ExpX::Loc(..)
+                | ExpX::ExecFnByName(..)
                 | ExpX::VarLoc(..) => Ok(()),
                 ExpX::Call(_, typs, _) => {
                     for typ in typs.iter() {

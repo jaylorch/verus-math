@@ -61,6 +61,11 @@ where
                     }
                     expr_visitor_control_flow!(typ_visitor_dfs(tr, ft));
                 }
+                TypX::FnDef(_path, ts) => {
+                    for t in ts.iter() {
+                        expr_visitor_control_flow!(typ_visitor_dfs(t, ft));
+                    }
+                }
                 TypX::Datatype(_path, ts) => {
                     for t in ts.iter() {
                         expr_visitor_control_flow!(typ_visitor_dfs(t, ft));
@@ -101,6 +106,10 @@ where
             let ts = vec_map_result(&**ts, |t| map_typ_visitor_env(t, env, ft))?;
             let tr = map_typ_visitor_env(tr, env, ft)?;
             ft(env, &Arc::new(TypX::AnonymousClosure(Arc::new(ts), tr, *id)))
+        }
+        TypX::FnDef(path, ts) => {
+            let ts = vec_map_result(&**ts, |t| map_typ_visitor_env(t, env, ft))?;
+            ft(env, &Arc::new(TypX::FnDef(path.clone(), Arc::new(ts))))
         }
         TypX::Datatype(path, ts) => {
             let ts = vec_map_result(&**ts, |t| map_typ_visitor_env(t, env, ft))?;
@@ -296,6 +305,7 @@ where
                         }
                     }
                 }
+                ExprX::ExecFnByName(_fun) => {}
                 ExprX::Choose { params, cond, body } => {
                     map.push_scope(true);
                     for binder in params.iter() {
@@ -463,6 +473,7 @@ where
         decrease_when,
         decrease_by: _,
         broadcast_forall,
+        fndef_axioms,
         mask_spec,
         is_const: _,
         publish: _,
@@ -506,6 +517,11 @@ where
         }
         expr_visitor_control_flow!(expr_visitor_dfs(req_ens, map, mf));
         map.pop_scope();
+    }
+    if let Some(es) = fndef_axioms {
+        for e in es.iter() {
+            expr_visitor_control_flow!(expr_visitor_dfs(e, map, mf));
+        }
     }
 
     VisitorControlFlow::Recurse
@@ -682,6 +698,7 @@ where
                 external_spec,
             }
         }
+        ExprX::ExecFnByName(fun) => ExprX::ExecFnByName(fun.clone()),
         ExprX::Choose { params, cond, body } => {
             let params =
                 vec_map_result(&**params, |b| b.map_result(|t| map_typ_visitor_env(t, env, ft)))?;
@@ -911,6 +928,7 @@ where
         decrease_when,
         decrease_by,
         broadcast_forall,
+        fndef_axioms,
         mask_spec,
         is_const,
         publish,
@@ -1007,6 +1025,17 @@ where
         None
     };
 
+    let fndef_axioms = if let Some(es) = fndef_axioms {
+        let mut es2 = vec![];
+        for e in es.iter() {
+            let e2 = map_expr_visitor_env(e, map, env, fe, fs, ft)?;
+            es2.push(e2);
+        }
+        Some(Arc::new(es2))
+    } else {
+        None
+    };
+
     let functionx = FunctionX {
         name,
         kind,
@@ -1022,6 +1051,7 @@ where
         decrease_when,
         decrease_by,
         broadcast_forall,
+        fndef_axioms,
         mask_spec,
         is_const,
         publish,

@@ -68,6 +68,8 @@ pub struct Ctx {
     pub(crate) datatypes_with_invariant: HashSet<Path>,
     pub(crate) mono_abstract_datatypes: Vec<MonoTyp>,
     pub(crate) lambda_types: Vec<usize>,
+    pub(crate) fndef_types: Vec<Fun>,
+    pub(crate) fndef_type_set: HashSet<Fun>,
     pub functions: Vec<Function>,
     pub func_map: HashMap<Fun, Function>,
     // Ensure a unique identifier for each quantifier in a given function
@@ -255,6 +257,7 @@ impl Ctx {
         module: Path,
         mono_abstract_datatypes: Vec<MonoTyp>,
         lambda_types: Vec<usize>,
+        fndef_types: Vec<Fun>,
         debug: bool,
     ) -> Result<Self, VirErr> {
         let mut datatype_is_transparent: HashMap<Path, bool> = HashMap::new();
@@ -281,12 +284,20 @@ impl Ctx {
         }
         let quantifier_count = Cell::new(0);
         let string_hashes = RefCell::new(HashMap::new());
+
+        let mut fndef_type_set = HashSet::new();
+        for fndef_type in fndef_types.iter() {
+            fndef_type_set.insert(fndef_type.clone());
+        }
+
         Ok(Ctx {
             module,
             datatype_is_transparent,
             datatypes_with_invariant,
             mono_abstract_datatypes,
             lambda_types,
+            fndef_types,
+            fndef_type_set,
             functions,
             func_map,
             quantifier_count,

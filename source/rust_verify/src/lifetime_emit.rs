@@ -82,6 +82,7 @@ impl ToString for TypX {
                 buf
             }
             TypX::Closure => "_".to_string(),
+            TypX::FnDef => "_".to_string(),
         }
     }
 }

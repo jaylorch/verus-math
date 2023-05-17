@@ -800,7 +800,7 @@ impl Verifier {
                     _ => {}
                 }
             }
-            // Declare requires/ensures
+            // Declare requires clauses
             for f in scc_fun_nodes.iter() {
                 if !funs.contains_key(f) {
                     continue;
@@ -897,7 +897,7 @@ impl Verifier {
                 }
             }
 
-            // Declare consequence axioms
+            // Declare consequence axioms (ensures clauses for proof/exec; body for spec fns)
             for f in scc_fun_nodes.iter() {
                 if !funs.contains_key(f) {
                     continue;
@@ -1061,7 +1061,7 @@ impl Verifier {
             reporter.report(&note_bare(&format!("verifying module {}", &module_name)));
         }
 
-        let (pruned_krate, mono_abstract_datatypes, lambda_types) =
+        let (pruned_krate, mono_abstract_datatypes, lambda_types, fndef_types) =
             vir::prune::prune_krate_for_module(&krate, &module, &self.vstd_crate_name);
         let mut ctx = vir::context::Ctx::new(
             &pruned_krate,
@@ -1069,6 +1069,7 @@ impl Verifier {
             module.clone(),
             mono_abstract_datatypes,
             lambda_types,
+            fndef_types,
             self.args.debug,
         )?;
         let poly_krate = vir::poly::poly_krate_for_module(&mut ctx, &pruned_krate);

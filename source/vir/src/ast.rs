@@ -106,6 +106,9 @@ pub enum TypX {
     Lambda(Typs, Typ),
     /// Executable function types (with a requires and ensures)
     AnonymousClosure(Typs, Typ, usize),
+    /// Corresponds to Rust's FnDef type
+    /// Typs are generic type args
+    FnDef(Fun, Typs),
     /// Datatype (concrete or abstract) applied to type arguments
     Datatype(Path, Typs),
     /// Boxed for SMT encoding (unrelated to Rust Box type), can be unboxed:
@@ -431,7 +434,7 @@ pub struct LoopInvariant {
 
 /// Static function identifier
 pub type Fun = Arc<FunX>;
-#[derive(Debug, Serialize, Deserialize, ToDebugSNode, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, ToDebugSNode, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FunX {
     /// Path of function
     pub path: Path,
@@ -441,10 +444,16 @@ pub struct FunX {
     pub trait_path: Option<Path>,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, ToDebugSNode)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToDebugSNode)]
 pub enum BuiltinSpecFun {
+    // Note that this now applies to any supported function type, e.g., FnDef types,
+    // not just "closure" types. TODO rename?
     ClosureReq,
     ClosureEns,
+    // Represented req%fn_name and ens%fn_name in AIR.
+    // Only used internally
+    StaticReq(Fun),
+    StaticEns(Fun),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToDebugSNode)]
@@ -543,6 +552,8 @@ pub enum ExprX {
         /// can assume about a closure object after it is created.
         external_spec: Option<(Ident, Expr)>,
     },
+    /// Executable function (declared with 'fn' and referred to by name)
+    ExecFnByName(Fun),
     /// Choose specification values satisfying a condition, compute body
     Choose { params: Binders<Typ>, cond: Expr, body: Expr },
     /// Manually supply triggers for body of quantifier
@@ -729,6 +740,11 @@ pub struct FunctionX {
     /// For broadcast_forall functions, poly sets this to Some((params, reqs ==> enss))
     /// where params and reqs ==> enss use coerce_typ_to_poly rather than coerce_typ_to_native
     pub broadcast_forall: Option<(Params, Expr)>,
+    /// Axioms (similar to broadcast axioms) for the FnDef type corresponding to
+    /// this function, if one is generated for this particular function.
+    /// Similar to 'external_spec' in the ExecClosure node, this is filled
+    /// in during ast_simplify.
+    pub fndef_axioms: Option<Exprs>,
     /// MaskSpec that specifies what invariants the function is allowed to open
     pub mask_spec: MaskSpec,
     /// is_const == true means that this function is actually a const declaration;

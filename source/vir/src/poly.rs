@@ -132,7 +132,12 @@ pub(crate) fn monotyp_to_typ(monotyp: &MonoTyp) -> Typ {
 
 pub(crate) fn typ_is_poly(ctx: &Ctx, typ: &Typ) -> bool {
     match &**typ {
-        TypX::Bool | TypX::Int(_) | TypX::Lambda(..) | TypX::StrSlice | TypX::Char => false,
+        TypX::Bool
+        | TypX::Int(_)
+        | TypX::Lambda(..)
+        | TypX::StrSlice
+        | TypX::Char
+        | TypX::FnDef(..) => false,
         TypX::AnonymousClosure(..) => {
             panic!("internal error: AnonymousClosure should be removed by ast_simplify")
         }
@@ -153,7 +158,12 @@ pub(crate) fn typ_is_poly(ctx: &Ctx, typ: &Typ) -> bool {
 
 fn coerce_typ_to_native(ctx: &Ctx, typ: &Typ) -> Typ {
     match &**typ {
-        TypX::Bool | TypX::Int(_) | TypX::Lambda(..) | TypX::StrSlice | TypX::Char => typ.clone(),
+        TypX::Bool
+        | TypX::Int(_)
+        | TypX::Lambda(..)
+        | TypX::StrSlice
+        | TypX::Char
+        | TypX::FnDef(..) => typ.clone(),
         TypX::AnonymousClosure(..) => {
             panic!("internal error: AnonymousClosure should be removed by ast_simplify")
         }
@@ -178,9 +188,12 @@ fn coerce_typ_to_native(ctx: &Ctx, typ: &Typ) -> Typ {
 
 pub(crate) fn coerce_typ_to_poly(_ctx: &Ctx, typ: &Typ) -> Typ {
     match &**typ {
-        TypX::Bool | TypX::Int(_) | TypX::Lambda(..) | TypX::StrSlice | TypX::Char => {
-            Arc::new(TypX::Boxed(typ.clone()))
-        }
+        TypX::Bool
+        | TypX::Int(_)
+        | TypX::Lambda(..)
+        | TypX::StrSlice
+        | TypX::Char
+        | TypX::FnDef(..) => Arc::new(TypX::Boxed(typ.clone())),
         TypX::AnonymousClosure(..) => {
             panic!("internal error: AnonymousClosure should be removed by ast_simplify")
         }
@@ -200,7 +213,8 @@ pub(crate) fn coerce_expr_to_native(ctx: &Ctx, expr: &Expr) -> Expr {
         | TypX::Lambda(..)
         | TypX::Datatype(..)
         | TypX::StrSlice
-        | TypX::Char => expr.clone(),
+        | TypX::Char
+        | TypX::FnDef(..) => expr.clone(),
         TypX::AnonymousClosure(..) => {
             panic!("internal error: AnonymousClosure should be removed by ast_simplify")
         }
@@ -233,7 +247,8 @@ fn coerce_expr_to_poly(ctx: &Ctx, expr: &Expr) -> Expr {
         | TypX::Lambda(..)
         | TypX::Datatype(..)
         | TypX::StrSlice
-        | TypX::Char => {
+        | TypX::Char
+        | TypX::FnDef(..) => {
             let op = UnaryOpr::Box(expr.typ.clone());
             let exprx = ExprX::UnaryOpr(op, expr.clone());
             let typ = Arc::new(TypX::Boxed(expr.typ.clone()));
@@ -503,6 +518,7 @@ fn poly_expr(ctx: &Ctx, state: &mut State, expr: &Expr) -> Expr {
                 external_spec: Some((cid.clone(), cexpr1)),
             })
         }
+        ExprX::ExecFnByName(fun) => mk_expr(ExprX::ExecFnByName(fun.clone())),
         ExprX::Choose { params, cond, body } => {
             let mut bs: Vec<Binder<Typ>> = Vec::new();
             state.types.push_scope(true);
@@ -688,6 +704,7 @@ fn poly_function(ctx: &Ctx, function: &Function) -> Function {
         decrease_when,
         decrease_by,
         broadcast_forall,
+        fndef_axioms,
         mask_spec,
         is_const,
         publish,
@@ -810,6 +827,17 @@ fn poly_function(ctx: &Ctx, function: &Function) -> Function {
         None
     };
 
+    let fndef_axioms = if let Some(es) = fndef_axioms {
+        let mut es2 = vec![];
+        for e in es.iter() {
+            let e2 = coerce_expr_to_native(ctx, &poly_expr(ctx, &mut state, &e));
+            es2.push(e2);
+        }
+        Some(Arc::new(es2))
+    } else {
+        None
+    };
+
     let functionx = FunctionX {
         name: name.clone(),
         kind: kind.clone(),
@@ -825,6 +853,7 @@ fn poly_function(ctx: &Ctx, function: &Function) -> Function {
         decrease_when,
         decrease_by: decrease_by.clone(),
         broadcast_forall,
+        fndef_axioms,
         mask_spec,
         is_const: *is_const,
         publish: *publish,

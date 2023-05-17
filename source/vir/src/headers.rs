@@ -257,6 +257,7 @@ fn make_trait_decl(method: &Function, spec_method: &Function) -> Result<Function
         decrease_when,
         decrease_by,
         broadcast_forall: _,
+        fndef_axioms: _,
         mask_spec,
         is_const: _,
         publish: _,

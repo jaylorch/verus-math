@@ -668,6 +668,53 @@ pub fn func_axioms_to_air(
                 let axiom = Arc::new(DeclX::Axiom(expr));
                 decl_commands.push(Arc::new(CommandX::Global(axiom)));
             }
+            if ctx.fndef_type_set.contains(&function.x.name) {
+                let fndef_axioms = function
+                    .x
+                    .fndef_axioms
+                    .as_ref()
+                    .expect("expected FnDef axioms to have been generated in ast_simplify");
+                for fndef_axiom in fndef_axioms.iter() {
+                    let mut state = crate::ast_to_sst::State::new(diagnostics);
+                    let exp = crate::ast_to_sst::expr_to_pure_exp(ctx, &mut state, fndef_axiom)?;
+                    let exp = state.finalize_exp(ctx, &new_fun_ssts, &exp)?;
+                    state.finalize();
+
+                    // Add forall-binders for each type param
+                    // The fndef_axiom shoudld already be a 'forall' statement
+                    // so we can add them to the existing forall node
+
+                    let mut binders: Vec<Binder<Typ>> = Vec::new();
+                    for (name, _bound) in function.x.typ_bounds.iter() {
+                        let typ = Arc::new(TypX::TypeId);
+                        let bind = BinderX { name: name.clone(), a: typ };
+                        binders.push(Arc::new(bind));
+                    }
+
+                    let exp = match &exp.x {
+                        ExpX::Bind(bnd, e) => match &bnd.x {
+                            BndX::Quant(quant, qbinders, trigs) => {
+                                let mut qbinders = (&**qbinders).clone();
+                                qbinders.append(&mut binders);
+                                let bndx = BndX::Quant(*quant, Arc::new(qbinders), trigs.clone());
+                                let bnd = Spanned::new(bnd.span.clone(), bndx);
+                                let expx = ExpX::Bind(bnd, e.clone());
+                                SpannedTyped::new(&exp.span, &exp.typ, expx)
+                            }
+                            _ => {
+                                panic!("fndef_axiom should be forall");
+                            }
+                        },
+                        _ => {
+                            panic!("fndef_axiom should be forall");
+                        }
+                    };
+
+                    let expr = exp_to_expr(ctx, &exp, &ExprCtxt::new_mode(ExprMode::Spec))?;
+                    let axiom = Arc::new(DeclX::Axiom(expr));
+                    decl_commands.push(Arc::new(CommandX::Global(axiom)));
+                }
+            }
         }
     }
     Ok((Arc::new(decl_commands), Arc::new(check_commands), new_fun_ssts))

@@ -365,6 +365,7 @@ fn erase_ty<'tcx>(ctxt: &Context<'tcx>, state: &mut State, ty: &Ty<'tcx>) -> Typ
             Box::new(TypX::Datatype(datatype_name, typ_args))
         }
         TyKind::Closure(..) => Box::new(TypX::Closure),
+        TyKind::FnDef(..) => Box::new(TypX::FnDef),
         _ => {
             dbg!(ty);
             panic!("unexpected type")
@@ -832,7 +833,7 @@ fn erase_expr<'tcx>(
                         _ => panic!("unsupported"),
                     },
                     Res::Def(def_kind, id) => match def_kind {
-                        DefKind::Const => {
+                        DefKind::Const | DefKind::Fn => {
                             let vir_path = def_id_to_vir_path(ctxt.tcx, id);
                             let fun_name = Arc::new(FunX { path: vir_path, trait_path: None });
                             return mk_exp(ExpX::Var(state.fun_name(&fun_name)));

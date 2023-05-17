@@ -36,6 +36,7 @@ struct State {
     worklist_modules: Vec<Path>,
     mono_abstract_datatypes: HashSet<MonoTyp>,
     lambda_types: HashSet<usize>,
+    fndef_types: HashSet<Fun>,
 }
 
 fn record_datatype(ctxt: &Ctxt, state: &mut State, typ: &Typ, path: &Path) {
@@ -122,6 +123,9 @@ fn traverse_reachable(ctxt: &Ctxt, state: &mut State) {
                 TypX::Lambda(typs, _) => {
                     state.lambda_types.insert(typs.len());
                 }
+                TypX::FnDef(fun, _) => {
+                    state.fndef_types.insert(fun.clone());
+                }
                 _ => {}
             }
             Ok(t.clone())
@@ -190,7 +194,7 @@ pub fn prune_krate_for_module(
     krate: &Krate,
     module: &Path,
     vstd_crate_name: &Option<Ident>,
-) -> (Krate, Vec<MonoTyp>, Vec<usize>) {
+) -> (Krate, Vec<MonoTyp>, Vec<usize>, Vec<Fun>) {
     let mut state: State = Default::default();
     state.reached_modules.insert(module.clone());
     state.worklist_modules.push(module.clone());
@@ -325,8 +329,10 @@ pub fn prune_krate_for_module(
     };
     let mut lambda_types: Vec<usize> = state.lambda_types.into_iter().collect();
     lambda_types.sort();
+    let mut fndef_types: Vec<Fun> = state.fndef_types.into_iter().collect();
+    fndef_types.sort();
     let mut mono_abstract_datatypes: Vec<MonoTyp> =
         state.mono_abstract_datatypes.into_iter().collect();
     mono_abstract_datatypes.sort();
-    (Arc::new(kratex), mono_abstract_datatypes, lambda_types)
+    (Arc::new(kratex), mono_abstract_datatypes, lambda_types, fndef_types)
 }

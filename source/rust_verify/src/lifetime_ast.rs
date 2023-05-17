@@ -40,6 +40,7 @@ pub(crate) enum TypX {
     Tuple(Vec<Typ>),
     Datatype(Id, Vec<Typ>),
     Closure,
+    FnDef,
 }
 
 pub(crate) type Pattern = Box<(Span, PatternX)>;

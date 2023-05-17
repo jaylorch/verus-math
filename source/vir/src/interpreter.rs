@@ -503,6 +503,9 @@ fn hash_exp<H: Hasher>(state: &mut H, exp: &Exp) {
                 InterpExp::Closure(e, _ctx) => dohash!(2; hash_exp(e)),
             }
         }
+        ExecFnByName(fun) => {
+            dohash!(16, fun);
+        }
     }
 }
 
@@ -1488,6 +1491,7 @@ fn eval_expr_internal(ctx: &Ctx, state: &mut State, exp: &Exp) -> Result<Exp, Vi
         },
         // Ignored by the interpreter at present (i.e., treated as symbolic)
         VarAt(..) | VarLoc(..) | Loc(..) | Old(..) | WithTriggers(..) => ok,
+        ExecFnByName(_) => ok,
     };
     let res = r?;
     state.depth -= 1;

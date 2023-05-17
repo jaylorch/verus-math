@@ -73,6 +73,7 @@ fn expr_get_early_exits_rec(
             ExprX::Quant(..)
             | ExprX::Closure(..)
             | ExprX::ExecClosure { .. }
+            | ExprX::ExecFnByName { .. }
             | ExprX::Choose { .. }
             | ExprX::WithTriggers { .. }
             | ExprX::AssertCompute(..)

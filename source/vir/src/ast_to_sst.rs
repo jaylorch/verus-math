@@ -980,6 +980,8 @@ fn expr_to_stm_opt(
             let f = match bsf {
                 BuiltinSpecFun::ClosureReq => InternalFun::ClosureReq,
                 BuiltinSpecFun::ClosureEns => InternalFun::ClosureEns,
+                BuiltinSpecFun::StaticReq(fun) => InternalFun::StaticReq(fun.clone()),
+                BuiltinSpecFun::StaticEns(fun) => InternalFun::StaticEns(fun.clone()),
             };
             Ok((
                 vec![],
@@ -1294,6 +1296,10 @@ fn expr_to_stm_opt(
             let v = mk_exp(ExpX::Var(uid));
 
             Ok((all_stms, ReturnValue::Some(v)))
+        }
+        ExprX::ExecFnByName(fun) => {
+            let v = mk_exp(ExpX::ExecFnByName(fun.clone()));
+            Ok((vec![], ReturnValue::Some(v)))
         }
         ExprX::Choose { params, cond, body } => {
             let mut check_recommends_stms = check_pure_expr_bind(ctx, state, params, true, cond)?;
