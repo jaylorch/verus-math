@@ -207,6 +207,19 @@ pub fn main() {
         println!("{}", serde_json::ser::to_string_pretty(&out).expect("invalid json"));
     }
 
+    // output dependencies
+    if verifier.args.print_dep {
+        match verifier.deps {
+            Some(deps) => {
+                print!("\nFile Dependencies: ");
+                for dep in deps { 
+                    print!("{} ", dep);} 
+                println!();
+            },
+            None => { panic!("Why there's no dependency?"); },
+        }
+    }
+
     match status {
         Ok(()) => (),
         Err(_) => {

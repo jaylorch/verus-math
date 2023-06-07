@@ -131,6 +131,9 @@ pub struct Verifier {
     // proof debugging purposes
     expand_flag: bool,
     pub expand_targets: Vec<air::messages::Message>,
+
+    // printing related files
+    pub deps : Option<Vec<String>>,
 }
 
 fn report_chosen_triggers(diagnostics: &impl Diagnostics, chosen: &vir::context::ChosenTriggers) {
@@ -177,6 +180,8 @@ impl Verifier {
 
             expand_flag: false,
             expand_targets: vec![],
+            
+            deps: None,
         }
     }
 
@@ -1560,6 +1565,19 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
                     }
                 }
             }
+
+            // try to put dependent files to verifier.deps
+
+            let deps: Vec<String> = compiler.session()
+            .source_map()
+            .files()
+            .iter()
+            .filter(|fmap| fmap.is_real_file())
+            .filter(|fmap| !fmap.is_imported())
+            .map(|fmap| (&fmap.name.prefer_local().to_string()).replace(' ', "\\ "))
+            .collect();
+
+            self.verifier.deps = Some(deps);
 
             if !compiler.session().compile_status().is_ok() {
                 return;

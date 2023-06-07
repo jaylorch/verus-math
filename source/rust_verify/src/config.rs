@@ -69,6 +69,7 @@ pub struct Args {
     pub no_vstd: bool,
     pub compile: bool,
     pub solver_version_check: bool,
+    pub print_dep: bool,
 }
 
 pub fn enable_default_features_and_verus_attr(
@@ -150,6 +151,7 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
     const OPT_PROFILE_ALL: &str = "profile-all";
     const OPT_COMPILE: &str = "compile";
     const OPT_NO_SOLVER_VERSION_CHECK: &str = "no-solver-version-check";
+    const OPT_PRINT_DEP: &str = "print-dep";
 
     let mut opts = Options::new();
     opts.optopt("", OPT_PERVASIVE_PATH, "Path of the pervasive module", "PATH");
@@ -178,6 +180,7 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
     );
     opts.optopt("", OPT_ARCH_WORD_BITS, "Size in bits for usize/isize: valid options are either '32', '64', or '32,64'. (default: 32,64)\nWARNING: this flag is a temporary workaround and will be removed in the near future", "BITS");
     opts.optflag("", OPT_TIME, "Measure and report time taken");
+    opts.optflag("", OPT_PRINT_DEP, "print all the source files that were loaded to generate the crate");
     opts.optflag("", OPT_OUTPUT_JSON, "Emit verification results and timing as json");
     opts.optopt(
         "",
@@ -359,6 +362,7 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
         compile: matches.opt_present(OPT_COMPILE),
         no_vstd: matches.opt_present(OPT_NO_VSTD),
         solver_version_check: !matches.opt_present(OPT_NO_SOLVER_VERSION_CHECK),
+        print_dep: matches.opt_present(OPT_PRINT_DEP),
     };
 
     (args, unmatched)
