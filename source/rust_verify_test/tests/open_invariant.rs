@@ -221,6 +221,21 @@ test_both! {
     } => Err(err) => assert_vir_error_msg(err, "Invariant must be Proof mode")
 }
 
+test_both! {
+    spend_credit_twice spend_credit_twice_local verus_code! {
+        use vstd::invariant::*;
+
+        pub proof fn spend_credit_twice<A, B: InvariantPredicate<A, u8>>(tracked credit: OpenInvariantCredit, tracked i: AtomicInvariant<A, u8, B>)
+          opens_invariants any
+        {
+          open_atomic_invariant_in_proof!(credit => &i => inner => {
+          });
+          open_atomic_invariant_in_proof!(credit => &i => inner => {
+          });
+        }
+    } => Err(err) => assert_vir_error_msg(err, "use of moved value: `credit`")
+}
+
 // This test doesn't apply to LocalInvariant
 test_verify_one_file! {
     #[test] exec_code_in_inv_block verus_code! {

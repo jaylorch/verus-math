@@ -1033,15 +1033,10 @@ fn erase_inv_block<'tcx>(
     span: Span,
     body: &Block<'tcx>,
 ) -> Exp {
-    assert!(body.stmts.len() == 4);
-    let spend_stmt = &body.stmts[0];
-    let open_stmt = &body.stmts[1];
-    let mid_stmt = &body.stmts[2];
-    if !crate::rust_to_vir_expr::is_spend_open_invariant_credit_call(&ctxt.verus_items, spend_stmt)
-    {
-        panic!("missing spend_open_invariant_credit call for erase_inv_block");
-    }
-    let (_guard_hir, _inner_hir, inner_pat, arg, atomicity) =
+    assert!(body.stmts.len() == 3);
+    let open_stmt = &body.stmts[0];
+    let mid_stmt = &body.stmts[1];
+    let (_guard_hir, _inner_hir, inner_pat, credit, arg, atomicity) =
         crate::rust_to_vir_expr::invariant_block_open(&ctxt.verus_items, open_stmt)
             .expect("invariant_block_open");
     let pat_typ = erase_ty(ctxt, state, &ctxt.types().node_type(inner_pat.hir_id));
@@ -1056,8 +1051,13 @@ fn erase_inv_block<'tcx>(
         }
     };
     let arg = erase_expr(ctxt, state, false, arg).expect("erase_inv_block arg");
+    let mut invariant_body = Vec::<Stm>::new();
+    let credit_exp = erase_expr(ctxt, state, false, credit).expect("erase_inv_block credit");
+    let drop_credit = StmX::Expr(Box::new((credit.span, ExpX::BuiltinMethod(credit_exp, "drop".to_string()))));
+    invariant_body.push(Box::new((credit.span, drop_credit)));
     let mid_body = erase_stmt(ctxt, state, mid_stmt);
-    Box::new((span, ExpX::OpenInvariant(atomicity, inner_pat, arg, pat_typ, mid_body)))
+    invariant_body.extend(mid_body);
+    Box::new((span, ExpX::OpenInvariant(atomicity, inner_pat, arg, pat_typ, invariant_body)))
 }
 
 fn erase_expr<'tcx>(
