@@ -48,11 +48,6 @@ pub trait ExOrd: Eq + PartialOrd {
 }
 
 #[verifier::external_trait_specification]
-pub trait ExHash {
-    type ExternalTraitSpecificationFor: core::hash::Hash;
-}
-
-#[verifier::external_trait_specification]
 pub trait ExPtrPointee {
     type ExternalTraitSpecificationFor: core::ptr::Pointee;
 
@@ -72,6 +67,14 @@ pub trait ExIntoIterator {
 #[verifier::external_trait_specification]
 pub trait ExIterStep: Clone + PartialOrd + Sized {
     type ExternalTraitSpecificationFor: core::iter::Step;
+}
+
+#[verifier::external_trait_specification]
+pub trait ExBorrow<Borrowed>
+    where
+        Borrowed: ?Sized,
+{
+    type ExternalTraitSpecificationFor: std::borrow::Borrow<Borrowed>;
 }
 
 #[verifier::external_fn_specification]
