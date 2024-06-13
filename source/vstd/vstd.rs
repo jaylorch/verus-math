@@ -81,6 +81,7 @@ pub broadcast group group_vstd_default {
     ptr::group_ptr_axioms,
     std_specs::range::group_range_axioms,
     raw_ptr::group_raw_ptr_axioms,
+    std_specs::hash_map::group_hash_map_axioms,
 }
 
 #[cfg(not(feature = "alloc"))]
@@ -99,6 +100,7 @@ pub broadcast group group_vstd_default {
     string::group_string_axioms,
     std_specs::range::group_range_axioms,
     raw_ptr::group_raw_ptr_axioms,
+    std_specs::hash_map::group_hash_map_axioms,
 }
 
 } // verus!

@@ -223,4 +223,11 @@ pub fn ex_hash_map_clear<Key, Value, S>(m: &mut HashMap<Key, Value, S>)
     m.clear()
 }
 
+#[cfg_attr(verus_keep_ghost, verifier::prune_unless_this_module_is_used)]
+pub broadcast group group_hash_map_axioms {
+    axiom_spec_len,
+    axiom_map_contains_borrowed_key,
+    axiom_map_maps_borrowed_key_to_value,
+}
+
 }
